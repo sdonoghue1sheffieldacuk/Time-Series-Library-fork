@@ -52,9 +52,11 @@ class FullAttention(nn.Module):
         self.mask_flag = mask_flag
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
+        self.fcount = -1 
         print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}")
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+        self.fcount += 1
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
         scale = self.scale or 1. / sqrt(E)
@@ -69,6 +71,10 @@ class FullAttention(nn.Module):
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         V = torch.einsum("bhls,bshd->blhd", A, values)
+
+        if self.fcount % 100 == 0:
+            print(f"FullAttention forward pass count: {self.fcount}, scores shape: {scores.shape}, A shape: {A.shape}, V shape: {V.shape}")
+            print(f" A : {A}, V: {V}")
 
         if self.output_attention:
             return V.contiguous(), A
