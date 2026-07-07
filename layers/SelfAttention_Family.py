@@ -92,15 +92,13 @@ class FullAttention(nn.Module):
             plt.xlabel("Key Position")
             plt.ylabel("Query Position")
             plt.title(f"Attention Head {head}")
-
+            plt.savefig(f"self.fcount_{self.fcount}.png")
             plt.show()
 
 
         V = torch.einsum("bhls,bshd->blhd", A, values)
 
-        if self.fcount % 100 == 0:
-            print(f"FullAttention forward pass count: {self.fcount}, scores shape: {scores.shape}, A shape: {A.shape}, V shape: {V.shape}")
-            print(f" A : {A}, V: {V}")
+
 
         if self.output_attention:
             return V.contiguous(), A
