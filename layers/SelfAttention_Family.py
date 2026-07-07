@@ -6,6 +6,7 @@ from utils.masking import TriangularCausalMask, ProbMask
 from reformer_pytorch import LSHSelfAttention
 from einops import rearrange, repeat
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 class DSAttention(nn.Module):
@@ -54,6 +55,9 @@ class FullAttention(nn.Module):
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
         self.fcount = -1 
+        now = datetime.now()
+        self.created = formatted = now.strftime("%Y%m%d_%H%M%S")
+
         print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}")
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
@@ -71,6 +75,9 @@ class FullAttention(nn.Module):
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
+
+        shape = torch.ones(L, S, device=A.device)
+        A = A * shape
 
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
         if self.fcount % 100 == 0:
@@ -92,7 +99,7 @@ class FullAttention(nn.Module):
             plt.xlabel("Key Position")
             plt.ylabel("Query Position")
             plt.title(f"Attention Head {head}")
-            plt.savefig(f"self.fcount_{self.fcount}.png")
+            plt.savefig(f"self.fcount_{self.fcount}_{self.created}.png")
             plt.show()
 
 
