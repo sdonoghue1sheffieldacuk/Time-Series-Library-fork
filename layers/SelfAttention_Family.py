@@ -5,6 +5,7 @@ from math import sqrt
 from utils.masking import TriangularCausalMask, ProbMask
 from reformer_pytorch import LSHSelfAttention
 from einops import rearrange, repeat
+import matplotlib.pyplot as plt
 
 
 class DSAttention(nn.Module):
@@ -70,6 +71,31 @@ class FullAttention(nn.Module):
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
+
+        # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
+        if self.fcount % 100 == 0:
+            head = 0      # choose which head to view
+            batch = 0     # first sample in the batch
+
+            attn = A[batch, head].detach().cpu().numpy()
+
+            plt.figure(figsize=(8, 6))
+            plt.imshow(
+                attn,
+                cmap="viridis",
+                aspect="auto",
+                origin="lower",
+                vmin=0.0,
+                vmax=attn.max()
+            )
+            plt.colorbar(label="Attention Weight")
+            plt.xlabel("Key Position")
+            plt.ylabel("Query Position")
+            plt.title(f"Attention Head {head}")
+
+            plt.show()
+
+
         V = torch.einsum("bhls,bshd->blhd", A, values)
 
         if self.fcount % 100 == 0:
