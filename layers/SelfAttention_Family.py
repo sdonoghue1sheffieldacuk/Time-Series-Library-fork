@@ -52,6 +52,7 @@ class FullAttention(nn.Module):
         self.mask_flag = mask_flag
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
+        print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}")
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
         B, L, H, E = queries.shape
