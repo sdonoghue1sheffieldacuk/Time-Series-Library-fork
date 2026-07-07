@@ -77,7 +77,7 @@ class FullAttention(nn.Module):
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
 
         #shape = torch.ones(L, S, device=A.device)
-        shape = torch.linspace(1.0, 0.2, S, device=A.device)
+        shape = torch.linspace(0.2, 1, S, device=A.device)
         shape = shape.unsqueeze(0).repeat(L, 1)
         A = A * shape
 
