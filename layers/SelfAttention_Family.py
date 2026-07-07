@@ -76,11 +76,14 @@ class FullAttention(nn.Module):
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
 
-        shape = torch.ones(L, S, device=A.device)
+        #shape = torch.ones(L, S, device=A.device)
+        shape = torch.linspace(1.0, 0.2, S, device=A.device)
+        shape = shape.unsqueeze(0).repeat(L, 1)
         A = A * shape
 
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
         if self.fcount % 100 == 0:
+            print(shape.shape)
             head = 0      # choose which head to view
             batch = 0     # first sample in the batch
 
