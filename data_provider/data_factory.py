@@ -1,3 +1,5 @@
+import os
+
 from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
     MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
 from data_provider.uea import collate_fn
@@ -79,6 +81,8 @@ def data_provider(args, flag):
             seasonal_patterns=args.seasonal_patterns
         )
         print(flag, len(data_set))
+        print(os.path.join(args.root_path, args.data_path))
+        print(os.getcwd())
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
