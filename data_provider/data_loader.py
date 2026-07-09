@@ -17,7 +17,136 @@ from huggingface_hub import hf_hub_download
 warnings.filterwarnings('ignore')
 
 HUGGINGFACE_REPO = "thuml/Time-Series-Library"
+class Dataset_Custom_MultiSeq(Dataset):
+    """
+    Like Dataset_Custom but supports a CSV containing multiple independent
+    sequences identified by a `series_id` column (or whatever seq_id_col is set to).
 
+    Expected CSV format:
+        date, series_id, feature1, ..., target
+
+    The dataset is split into train/val/test by sequence, not by time.
+    Sliding windows are only built within each sequence's split portion,
+    so no window ever straddles a sequence boundary.
+    The scaler is fitted on the combined train portions of all sequences.
+    """
+
+    def __init__(self, args, root_path, flag='train', size=None,
+                 features='S', data_path='data.csv',
+                 target='OT', scale=True, timeenc=0, freq='h',
+                 seasonal_patterns=None, seq_id_col='series_id'):
+        self.args = args
+        if size is None:
+            self.seq_len = 24 * 4 * 4
+            self.label_len = 24 * 4
+            self.pred_len = 24 * 4
+        else:
+            self.seq_len, self.label_len, self.pred_len = size
+
+        assert flag in ['train', 'val', 'test']
+        self.set_type = {'train': 0, 'val': 1, 'test': 2}[flag]
+
+        self.features = features
+        self.target = target
+        self.scale = scale
+        self.timeenc = timeenc
+        self.freq = freq
+        self.seq_id_col = seq_id_col
+        self.root_path = root_path
+        self.data_path = data_path
+        self.__read_data__()
+
+    def __read_data__(self):
+        self.scaler = StandardScaler()
+
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+
+        other_cols = [c for c in df_raw.columns
+                    if c not in ('date', self.seq_id_col, self.target)]
+        df_raw = df_raw[['date', self.seq_id_col] + other_cols + [self.target]]
+
+        feat_cols = (
+            [c for c in df_raw.columns if c not in ('date', self.seq_id_col)]
+            if self.features in ('M', 'MS')
+            else [self.target]
+        )
+
+        # Assign whole sequences to splits by sequence order
+        all_ids = list(dict.fromkeys(df_raw[self.seq_id_col]))  # stable, deduplicated
+        n_seqs = len(all_ids)
+        num_train = int(n_seqs * 0.7)
+        num_test  = int(n_seqs * 0.2)
+        num_vali  = n_seqs - num_train - num_test
+
+        split_ids = [
+            set(all_ids[:num_train]),                              # train
+            set(all_ids[num_train:num_train + num_vali]),          # val
+            set(all_ids[num_train + num_vali:]),                   # test
+        ]
+        ids_for_this_split = split_ids[self.set_type]
+        train_ids = split_ids[0]
+
+        # Fit scaler on train sequences only
+        if self.scale:
+            train_data = df_raw[df_raw[self.seq_id_col].isin(train_ids)][feat_cols].values
+            self.scaler.fit(train_data)
+
+        # Build arrays and window index for sequences in this split
+        self._data_arrays = []
+        self.window_index = []
+
+        for seq_id in all_ids:
+            if seq_id not in ids_for_this_split:
+                continue
+
+            group = df_raw[df_raw[self.seq_id_col] == seq_id].reset_index(drop=True)
+            raw = group[feat_cols].values
+            data = self.scaler.transform(raw) if self.scale else raw
+
+            df_stamp = group[['date']].copy()
+            df_stamp['date'] = pd.to_datetime(df_stamp['date'])
+            if self.timeenc == 0:
+                data_stamp = np.column_stack([
+                    df_stamp['date'].dt.month,
+                    df_stamp['date'].dt.day,
+                    df_stamp['date'].dt.weekday,
+                    df_stamp['date'].dt.hour,
+                ])
+            else:
+                data_stamp = time_features(
+                    pd.to_datetime(df_stamp['date'].values), freq=self.freq
+                ).transpose(1, 0)
+
+            if self.set_type == 0 and self.args.augmentation_ratio > 0:
+                data, _, _ = run_augmentation_single(data, data, self.args)
+
+            seq_idx = len(self._data_arrays)
+            self._data_arrays.append((data, data_stamp))
+
+            n_windows = len(data) - self.seq_len - self.pred_len + 1
+            for i in range(max(0, n_windows)):
+                self.window_index.append((seq_idx, i))
+    def __getitem__(self, index):
+        seq_idx, i = self.window_index[index]
+        data_x, data_stamp = self._data_arrays[seq_idx]
+
+        s_begin = i
+        s_end   = s_begin + self.seq_len
+        r_begin = s_end   - self.label_len
+        r_end   = r_begin + self.label_len + self.pred_len
+
+        return (
+            data_x[s_begin:s_end],
+            data_x[r_begin:r_end],
+            data_stamp[s_begin:s_end],
+            data_stamp[r_begin:r_end],
+        )
+
+    def __len__(self):
+        return len(self.window_index)
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
 class Dataset_ETT_hour(Dataset):
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
