@@ -82,8 +82,8 @@ class FullAttention(nn.Module):
         shape = shape.unsqueeze(0).repeat(L, 1)
         A = A * shape
 
-        # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
-        if self.fcount % 100 == 0:
+        # Visualize the attention weights for the first head 
+        if self.fcount == 100:
             print(shape.shape)
             head = 0      # choose which head to view
             batch = 0     # first sample in the batch
