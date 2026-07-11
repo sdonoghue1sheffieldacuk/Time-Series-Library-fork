@@ -78,7 +78,7 @@ class FullAttention(nn.Module):
 
         #shape = torch.ones(L, S, device=A.device)
         print (f"fcount={self.fcount}, L={L}, S={S}, A.shape={A.shape}, device={A.device}")
-        shape = torch.linspace(0.99, 1, S, device=A.device)
+        shape = torch.linspace(0.5, 1, S, device=A.device)
         shape = shape.unsqueeze(0).repeat(L, 1)
         A = A * shape
 
