@@ -257,7 +257,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         print('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f = open("result_long_term_forecast.txt", 'a')
         date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        f.write("date and time:",date_time)
+        f.write("date and time:" + date_time +" \n")
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f.write('\n')
