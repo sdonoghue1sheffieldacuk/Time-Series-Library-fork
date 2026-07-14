@@ -110,7 +110,7 @@ class FullAttention(nn.Module):
                 A = A / (A.sum(dim=-1, keepdim=True) + 1e-8)
 
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
-        if self.fcount % 100 == 0:
+        if self.fcount == 100:
             print(shape_vec.view(1, 1, 1, S))
             head = 0      # choose which head to view
             batch = 0     # first sample in the batch
