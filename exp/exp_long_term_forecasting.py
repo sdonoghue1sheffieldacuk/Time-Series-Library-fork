@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch import optim
 import os
 import time
+from datetime import datetime
 import warnings
 import numpy as np
 from utils.dtw_metric import dtw, accelerated_dtw
@@ -255,6 +256,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f = open("result_long_term_forecast.txt", 'a')
+        date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+        f.write("date and time:",date_time)
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f.write('\n')
