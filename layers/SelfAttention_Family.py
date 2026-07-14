@@ -48,12 +48,32 @@ class DSAttention(nn.Module):
 
 
 class FullAttention(nn.Module):
-    def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
+    def __init__(
+        self,
+        mask_flag=True,
+        factor=5,
+        scale=None,
+        attention_dropout=0.1,
+        output_attention=False,
+        shape_mode="linear",      # "none" | "linear" | "power"
+        shape_start=0.2,
+        shape_end=1.0,
+        shape_power=1.0,
+        shape_renorm=False,
+    ):
         super(FullAttention, self).__init__()
         self.scale = scale
         self.mask_flag = mask_flag
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
+
+        ## temp code to set shape of linspace for attention head
+        self.shape_mode = shape_mode
+        self.shape_start = shape_start
+        self.shape_end = shape_end
+        self.shape_power = shape_power
+        self.shape_renorm = shape_renorm
+
         self.fcount = -1 
         now = datetime.now()
         self.created = formatted = now.strftime("%Y%m%d_%H%M%S")
@@ -76,15 +96,22 @@ class FullAttention(nn.Module):
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
 
-        #shape = torch.ones(L, S, device=A.device)
-        print (f"fcount={self.fcount}, L={L}, S={S}, A.shape={A.shape}, device={A.device}")
-        shape = torch.linspace(0.2, 1, S, device=A.device)
-        shape = shape.unsqueeze(0).repeat(L, 1)
-        A = A * shape
+        if self.shape_mode != "none":
+            if self.shape_mode == "linear":
+                shape_vec = torch.linspace(self.shape_start, self.shape_end, S, device=A.device, dtype=A.dtype)
+            elif self.shape_mode == "power":
+                t = torch.linspace(0.0, 1.0, S, device=A.device, dtype=A.dtype)
+                shape_vec = self.shape_start + (self.shape_end - self.shape_start) * torch.pow(t, self.shape_power)
+            else:
+                raise ValueError(f"Unknown shape_mode: {self.shape_mode}")
 
-        # Visualize the attention weights for the first head 
-        if self.fcount == 100:
-            print(shape.shape)
+            A = A * shape_vec.view(1, 1, 1, S)
+            if self.shape_renorm:
+                A = A / (A.sum(dim=-1, keepdim=True) + 1e-8)
+
+        # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
+        if self.fcount % 100 == 0:
+            print(shape_vec.view(1, 1, 1, S))
             head = 0      # choose which head to view
             batch = 0     # first sample in the batch
 
@@ -291,16 +318,30 @@ class TwoStageAttentionLayer(nn.Module):
     input/output shape: [batch_size, Data_dim(D), Seg_num(L), d_model]
     '''
 
-    def __init__(self, configs,
-                 seg_num, factor, d_model, n_heads, d_ff=None, dropout=0.1):
+    def __init__(self, configs, seg_num, factor, d_model, n_heads, d_ff=None, dropout=0.1):
         super(TwoStageAttentionLayer, self).__init__()
         d_ff = d_ff or 4 * d_model
-        self.time_attention = AttentionLayer(FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                                           output_attention=False), d_model, n_heads)
-        self.dim_sender = AttentionLayer(FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                                       output_attention=False), d_model, n_heads)
-        self.dim_receiver = AttentionLayer(FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                                         output_attention=False), d_model, n_heads)
+
+        fa_kwargs = dict(
+            shape_mode=getattr(configs, "attn_shape_mode", "linear"),
+            shape_start=getattr(configs, "attn_shape_start", 0.2),
+            shape_end=getattr(configs, "attn_shape_end", 1.0),
+            shape_power=getattr(configs, "attn_shape_power", 1.0),
+            shape_renorm=getattr(configs, "attn_shape_renorm", False),
+        )
+
+        self.time_attention = AttentionLayer(
+            FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False, **fa_kwargs),
+            d_model, n_heads
+        )
+        self.dim_sender = AttentionLayer(
+            FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False, **fa_kwargs),
+            d_model, n_heads
+        )
+        self.dim_receiver = AttentionLayer(
+            FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False, **fa_kwargs),
+            d_model, n_heads
+        )
         self.router = nn.Parameter(torch.randn(seg_num, factor, d_model))
 
         self.dropout = nn.Dropout(dropout)
