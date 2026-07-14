@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
     #shaped attention head arguments 
     parser.add_argument('--attn_shape_mode', type=str, default='linear', choices=['none', 'linear', 'power'])
-    parser.add_argument('--attn_shape_start', type=float, default=0.2)
+    parser.add_argument('--attn_shape_start', type=float, default=1.0)
     parser.add_argument('--attn_shape_end', type=float, default=1.0)
     parser.add_argument('--attn_shape_power', type=float, default=1.0)
     parser.add_argument('--attn_shape_renorm', action='store_true')
@@ -210,7 +210,7 @@ if __name__ == '__main__':
         for ii in range(args.itr):
             # setting record of experiments
             exp = Exp(args)  # set experiments
-            setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}'.format(
+            setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_attn_shp{}s{}e{}p{}r{}|{}'.format(
                 args.task_name,
                 args.model_id,
                 args.model,
@@ -229,7 +229,12 @@ if __name__ == '__main__':
                 args.factor,
                 args.embed,
                 args.distil,
-                args.des, ii)
+                args.des,
+                args.attn_shape_mode,
+                args.attn_shape_start,
+                args.attn_shape_end,
+                args.attn_shape_power,
+                args.attn_shape_renorm, ii)
             
             # Override setting for specific model to ensure proper checkpoint naming and logging
             if args.model == 'MambaSingleLayer' and args.task_name == 'classification':
@@ -251,7 +256,7 @@ if __name__ == '__main__':
     else:
         exp = Exp(args)  # set experiments
         ii = 0
-        setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}'.format(
+        setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_attn_shp{}s{}e{}p{}r{}|{}'.format(
             args.task_name,
             args.model_id,
             args.model,
@@ -270,7 +275,12 @@ if __name__ == '__main__':
             args.factor,
             args.embed,
             args.distil,
-            args.des, ii)
+            args.des,
+            args.attn_shape_mode,
+            args.attn_shape_start,
+            args.attn_shape_end,
+            args.attn_shape_power,
+            args.attn_shape_renorm, ii)
         
         # Override setting for specific model to ensure proper checkpoint naming and logging
         if args.model == 'MambaSingleLayer' and args.task_name == 'classification':
