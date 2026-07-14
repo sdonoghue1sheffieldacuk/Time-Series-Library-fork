@@ -58,7 +58,7 @@ class Model(nn.Module):
                             configs.d_model, configs.n_heads),
                         AttentionLayer(
                             FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                          output_attention=False **fa_kwargs),
+                                          output_attention=False, **fa_kwargs),
                             configs.d_model, configs.n_heads),
                         configs.d_model,
                         configs.d_ff,
