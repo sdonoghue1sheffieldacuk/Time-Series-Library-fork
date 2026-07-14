@@ -56,7 +56,7 @@ class FullAttention(nn.Module):
         attention_dropout=0.1,
         output_attention=False,
         shape_mode="linear",      # "none" | "linear" | "power"
-        shape_start=0.2,
+        shape_start=1.0,
         shape_end=1.0,
         shape_power=1.0,
         shape_renorm=False,
