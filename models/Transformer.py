@@ -18,6 +18,15 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
+
+        fa_kwargs = dict(
+            shape_mode=getattr(configs, "attn_shape_mode", "linear"),
+            shape_start=getattr(configs, "attn_shape_start", 0.2),
+            shape_end=getattr(configs, "attn_shape_end", 1.0),
+            shape_power=getattr(configs, "attn_shape_power", 1.0),
+            shape_renorm=getattr(configs, "attn_shape_renorm", False),
+        )
+
         # Embedding
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
@@ -27,7 +36,7 @@ class Model(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                      output_attention=False), configs.d_model, configs.n_heads),
+                                      output_attention=False, **fa_kwargs), configs.d_model, configs.n_heads),
                     configs.d_model,
                     configs.d_ff,
                     dropout=configs.dropout,
@@ -45,11 +54,11 @@ class Model(nn.Module):
                     DecoderLayer(
                         AttentionLayer(
                             FullAttention(True, configs.factor, attention_dropout=configs.dropout,
-                                          output_attention=False),
+                                          output_attention=False, **fa_kwargs),
                             configs.d_model, configs.n_heads),
                         AttentionLayer(
                             FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                          output_attention=False),
+                                          output_attention=False **fa_kwargs),
                             configs.d_model, configs.n_heads),
                         configs.d_model,
                         configs.d_ff,
