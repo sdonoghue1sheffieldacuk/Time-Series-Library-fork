@@ -156,6 +156,13 @@ if __name__ == '__main__':
     parser.add_argument('--top_p', type=float, default=0.5, help='Dynamic Routing in MoE')
     parser.add_argument('--pos', type=int, choices=[0, 1], default=1, help='Positional Embedding. Set pos to 0 or 1')
 
+    #shaped attention head arguments 
+    parser.add_argument('--attn_shape_mode', type=str, default='linear', choices=['none', 'linear', 'power'])
+    parser.add_argument('--attn_shape_start', type=float, default=0.2)
+    parser.add_argument('--attn_shape_end', type=float, default=1.0)
+    parser.add_argument('--attn_shape_power', type=float, default=1.0)
+    parser.add_argument('--attn_shape_renorm', action='store_true')
+
     args = parser.parse_args()
     if torch.cuda.is_available() and args.use_gpu:
         args.device = torch.device('cuda:{}'.format(args.gpu))
