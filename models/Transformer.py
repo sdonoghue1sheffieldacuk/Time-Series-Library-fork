@@ -36,7 +36,7 @@ class Model(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullLearningAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                      output_attention=False, **fa_kwargs), configs.d_model, configs.n_heads),
+                                      output_attention=False, shape_mode='power'), configs.d_model, configs.n_heads),
                     configs.d_model,
                     configs.d_ff,
                     dropout=configs.dropout,
@@ -54,11 +54,11 @@ class Model(nn.Module):
                     DecoderLayer(
                         AttentionLayer(
                             FullLearningAttention(True, configs.factor, attention_dropout=configs.dropout,
-                                          output_attention=False, **fa_kwargs),
+                                          output_attention=False, shape_mode='power'),
                             configs.d_model, configs.n_heads),
                         AttentionLayer(
                             FullLearningAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                          output_attention=False, **fa_kwargs),
+                                          output_attention=False, shape_mode='power'),
                             configs.d_model, configs.n_heads),
                         configs.d_model,
                         configs.d_ff,
