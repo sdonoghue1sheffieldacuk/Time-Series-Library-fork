@@ -164,6 +164,13 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
+        for name, module in model.named_modules():
+            if isinstance(module, FullAttention) and module.shape_mode != 'none':
+                print(f"{name}:")
+                print(f"  shape_start = {module.shape_start.item():.4f}")
+                print(f"  shape_end   = {module.shape_end.item():.4f}")
+                print(f"  shape_power = {module.shape_power.item():.4f}")  # softplus applied
+
         return self.model
 
     def test(self, setting, test=0):
