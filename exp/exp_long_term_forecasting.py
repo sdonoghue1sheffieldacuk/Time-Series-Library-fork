@@ -1,5 +1,6 @@
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
+from layers.SelfAttention_Family import FullAttention
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
 from utils.metrics import metric
 import torch
@@ -164,7 +165,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
-        for name, module in model.named_modules():
+        for name, module in self.model.named_modules():
             if isinstance(module, FullAttention) and module.shape_mode != 'none':
                 print(f"{name}:")
                 print(f"  shape_start = {module.shape_start.item():.4f}")
