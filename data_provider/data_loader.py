@@ -59,7 +59,7 @@ class Dataset_Custom_MultiSeq(Dataset):
     def __read_data__(self):
         self.scaler = StandardScaler()
         print(os.path.join(self.root_path, self.data_path))
-        print(os.getcwd())
+        print
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
 
         other_cols = [c for c in df_raw.columns

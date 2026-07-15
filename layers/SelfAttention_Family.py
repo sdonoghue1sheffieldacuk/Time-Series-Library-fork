@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F 
 import numpy as np
 from math import sqrt
 from utils.masking import TriangularCausalMask, ProbMask
@@ -7,7 +8,6 @@ from reformer_pytorch import LSHSelfAttention
 from einops import rearrange, repeat
 import matplotlib.pyplot as plt
 from datetime import datetime
-
 
 class DSAttention(nn.Module):
     '''De-stationary Attention'''
@@ -45,7 +45,6 @@ class DSAttention(nn.Module):
             return V.contiguous(), A
         else:
             return V.contiguous(), None
-
 
 class FullAttention(nn.Module):
     def __init__(
@@ -142,6 +141,98 @@ class FullAttention(nn.Module):
             return V.contiguous(), A
         else:
             return V.contiguous(), None
+
+class FullLearningAttention(nn.Module):
+    def __init__(
+        self,
+        mask_flag=True,
+        factor=5,
+        scale=None,
+        attention_dropout=0.1,
+        output_attention=False,
+        shape_mode="none",      # "none" | "linear" | "power"
+
+    ):
+        super(FullLearningAttention, self).__init__()
+        self.scale = scale
+        self.mask_flag = mask_flag
+        self.output_attention = output_attention
+        self.dropout = nn.Dropout(attention_dropout)
+
+        ## temp code to set shape of linspace for attention head
+        self.shape_mode = shape_mode
+
+        self.fcount = -1 
+        now = datetime.now()
+        self.created = formatted = now.strftime("%Y%m%d_%H%M%S")
+
+        print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}")
+    
+    @property
+    def shape_power(self):
+        # Constrain to (0, inf) so the power function is always valid
+        return F.softplus(self._shape_power_raw)
+    
+    def _positional_bias(self, S: int, device) -> torch.Tensor:
+        """Returns a bias vector of shape [1, 1, 1, S] to add to attention scores."""
+        pos = torch.linspace(0.0, 1.0, S, device=device)         # [S]
+        if self.shape_mode == 'power':
+            t = pos.pow(self.shape_power)
+        else:  # 'power_reverse'
+            t = (1.0 - pos).pow(self.shape_power)
+        bias = self.shape_start + (self.shape_end - self.shape_start) * t
+        return bias.view(1, 1, 1, S)
+    
+    def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+        self.fcount += 1
+        B, L, H, E = queries.shape
+        _, S, _, D = values.shape
+        scale = self.scale or 1. / sqrt(E)
+
+        scores = torch.einsum("blhe,bshe->bhls", queries, keys)
+        
+        if self.shape_mode != 'none':
+            scores = scores + self._positional_bias(S, queries.device)
+
+        if self.mask_flag:
+            if attn_mask is None:
+                attn_mask = TriangularCausalMask(B, L, device=queries.device)
+            scores.masked_fill_(attn_mask.mask, -np.inf)
+
+        A = self.dropout(torch.softmax(scale * scores, dim=-1))
+
+        # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
+        if self.fcount == 100:
+            self.visualize_attention(queries, S, A)
+
+        V = torch.einsum("bhls,bshd->blhd", A, values)
+        if self.output_attention:
+            return V.contiguous(), A
+        else:
+            return V.contiguous(), None
+
+    def visualize_attention(self, queries, S, A):
+        print(self._positional_bias(S, queries.device))
+        head = 0      # choose which head to view
+        batch = 0     # first sample in the batch
+
+        attn = A[batch, head].detach().cpu().numpy()
+
+        plt.figure(figsize=(8, 6))
+        plt.imshow(
+                attn,
+                cmap="viridis",
+                aspect="auto",
+                origin="lower",
+                vmin=0.0,
+                vmax=attn.max()
+            )
+        plt.colorbar(label="Attention Weight")
+        plt.xlabel("Key Position")
+        plt.ylabel("Query Position")
+        plt.title(f"Attention Head {head}")
+        plt.savefig(f"self.fcount_{self.fcount}_{self.created}.png")
+        plt.show()
 
 
 class ProbAttention(nn.Module):
