@@ -234,6 +234,8 @@ class FullLearningAttention(nn.Module):
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
         
         if self.shape_mode != 'none':
+            if self.fcount % 500 == 0:
+                print(f"scores : {scores}")
             scores = scores + self._positional_bias(S, queries.device)
 
         if self.mask_flag:
