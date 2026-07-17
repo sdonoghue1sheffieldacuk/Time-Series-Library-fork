@@ -264,11 +264,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         print('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f = open("result_long_term_forecast.txt", 'a')
         date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        for name, module in self.model.named_modules():
-            if isinstance(module, FullAttention) and module.shape_mode != 'none':
-                f.write(f"  shape_start = {module.shape_start.item():.4f} \n")
-                f.write(f"  shape_end   = {module.shape_end.item():.4f} \n")
-                f.write(f"  shape_power = {module.shape_power.item():.4f} \n")  # softplus applied
+        
         f.write("date and time:" + date_time +" \n")
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
