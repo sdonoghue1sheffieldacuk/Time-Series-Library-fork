@@ -166,11 +166,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         self.model.load_state_dict(torch.load(best_model_path))
 
 
+        head_id = 0
         for name, module in self.model.named_modules():
             if isinstance(module, FullLearningAttention):
-                print("triggered")
-                module.plot_positional_bias_history(save_path="positional_bias_history.png")
-
+                head_id+=1 
+                module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
         return self.model
 
     def test(self, setting, test=0):

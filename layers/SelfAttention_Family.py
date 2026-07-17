@@ -109,7 +109,7 @@ class FullAttention(nn.Module):
                 A = A / (A.sum(dim=-1, keepdim=True) + 1e-8)
 
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
-        if self.fcount == 100:
+        if self.fcount == 1000:
             print(shape_vec.view(1, 1, 1, S))
             head = 0      # choose which head to view
             batch = 0     # first sample in the batch
@@ -190,7 +190,7 @@ class FullLearningAttention(nn.Module):
 
     def _record_positional_bias_history(self, S: int, device) -> None:
         forward_count = self.fcount
-        if self.shape_mode == 'none' or forward_count % 100 != 0:
+        if self.shape_mode == 'none' or forward_count % 500 != 0:
             return
 
         bias_snapshot = self._positional_bias(S, device).detach().cpu().view(-1).clone()
@@ -245,7 +245,7 @@ class FullLearningAttention(nn.Module):
         print(f"shape_power: {self.shape_power.item():.4f}")
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
-        if self.fcount % 100 ==0 :
+        if self.fcount % 500 ==0 :
             self.visualize_attention(queries, S, A)
         V = torch.einsum("bhls,bshd->blhd", A, values)
         if self.output_attention:
