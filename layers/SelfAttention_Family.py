@@ -166,7 +166,7 @@ class FullLearningAttention(nn.Module):
             self.shape_start     = nn.Parameter(torch.zeros(1))
             self.shape_end       = nn.Parameter(torch.zeros(1))
             self._shape_power_raw = nn.Parameter(torch.ones(1))  # softplus -> 1.0
-
+        self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
         self.created = formatted = now.strftime("%Y%m%d_%H%M%S")
@@ -187,6 +187,43 @@ class FullLearningAttention(nn.Module):
             t = (1.0 - pos).pow(self.shape_power)
         bias = self.shape_start + (self.shape_end - self.shape_start) * t
         return bias.view(1, 1, 1, S)
+
+    def _record_positional_bias_history(self, S: int, device) -> None:
+        forward_count = self.fcount
+        if self.shape_mode == 'none' or forward_count % 100 != 0:
+            return
+
+        bias_snapshot = self._positional_bias(S, device).detach().cpu().view(-1).clone()
+        self.positional_bias_history.append({
+            "forward_count": forward_count,
+            "bias": bias_snapshot,
+        })
+
+    def plot_positional_bias_history(self, show=True, save_path=None):
+        if not self.positional_bias_history:
+            raise ValueError("No positional bias history recorded yet.")
+
+        plt.figure(figsize=(10, 6))
+        for history_entry in self.positional_bias_history:
+            bias_values = history_entry["bias"].numpy()
+            plt.plot(
+                np.arange(len(bias_values)),
+                bias_values,
+                label=f"forward {history_entry['forward_count']}"
+            )
+
+        plt.xlabel("Position")
+        plt.ylabel("Positional Bias")
+        plt.title("FullLearningAttention Positional Bias History")
+        plt.legend()
+        plt.tight_layout()
+
+        if save_path is not None:
+            plt.savefig(save_path)
+        if show:
+            plt.show()
+        else:
+            plt.close()
     
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
         self.fcount += 1
@@ -204,12 +241,12 @@ class FullLearningAttention(nn.Module):
                 attn_mask = TriangularCausalMask(B, L, device=queries.device)
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
+        self._record_positional_bias_history(S, queries.device)
+        print(f"shape_power: {self.shape_power.item():.4f}")
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
-
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
         if self.fcount % 100 ==0 :
             self.visualize_attention(queries, S, A)
-
         V = torch.einsum("bhls,bshd->blhd", A, values)
         if self.output_attention:
             return V.contiguous(), A
