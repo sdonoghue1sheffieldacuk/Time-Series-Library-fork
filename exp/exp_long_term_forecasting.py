@@ -172,10 +172,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 print(f"  shape_end   = {module.shape_end.item():.4f}")
                 print(f"  shape_power = {module.shape_power.item():.4f}")  # softplus applied
 
+        head_id = 0  # Specify the head ID you want to visualize
         for name, module in self.model.named_modules():
             if isinstance(module, FullLearningAttention):
-                print("triggered")
-                module.plot_positional_bias_history(save_path="positional_bias_history.png")
+                head_id+=1 
+                module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
 
         return self.model
 
