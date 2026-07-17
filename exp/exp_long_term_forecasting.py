@@ -173,8 +173,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 print(f"  shape_power = {module.shape_power.item():.4f}")  # softplus applied
 
         for name, module in self.model.named_modules():
-            if isinstance(module, FullLearningAttention) and module.shape_mode != 'none':
-                module.plot_positional_bias_history()
+            if isinstance(module, FullLearningAttention):
+                print("triggered")
+                module.plot_positional_bias_history(save_path="positional_bias_history.png")
 
         return self.model
 
