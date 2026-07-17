@@ -1,6 +1,6 @@
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
-from layers.SelfAttention_Family import FullAttention
+from layers.SelfAttention_Family import FullAttention, FullLearningAttention
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
 from utils.metrics import metric
 import torch
@@ -171,6 +171,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 print(f"  shape_start = {module.shape_start.item():.4f}")
                 print(f"  shape_end   = {module.shape_end.item():.4f}")
                 print(f"  shape_power = {module.shape_power.item():.4f}")  # softplus applied
+
+        for name, module in self.model.named_modules():
+            if isinstance(module, FullLearningAttention) and module.shape_mode != 'none':
+                module.plot_positional_bias_history()
 
         return self.model
 
