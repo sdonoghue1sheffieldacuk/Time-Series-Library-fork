@@ -234,9 +234,9 @@ class FullLearningAttention(nn.Module):
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
         
         if self.shape_mode != 'none':
-            if self.fcount % 500 == 0:
-                print(f"scores : {scores}")
-                print(f"shape_power: {self.shape_power.item():.4f}")
+            #if self.fcount % 500 == 0:
+                #print(f"scores : {scores}")
+                #print(f"shape_power: {self.shape_power.item():.4f}")
             pb = self._positional_bias(S, queries.device)
             logit_range = torch.max(scores) - torch.min(scores)
             #scores = scores + logit_range*pb /10
