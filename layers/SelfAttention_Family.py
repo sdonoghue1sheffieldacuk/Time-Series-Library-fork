@@ -239,8 +239,8 @@ class FullLearningAttention(nn.Module):
                 print(f"shape_power: {self.shape_power.item():.4f}")
             pb = self._positional_bias(S, queries.device)
             logit_range = torch.max(scores) - torch.min(scores)
-            scores = scores + logit_range*pb /10
-            #print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.min(pb)} \n")
+            #scores = scores + logit_range*pb /10
+            scores = scores*pb            #print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.min(pb)} \n")
 
         if self.mask_flag:
             if attn_mask is None:
