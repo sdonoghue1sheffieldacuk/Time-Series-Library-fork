@@ -100,7 +100,7 @@ class FullAttention(nn.Module):
                 shape_vec = torch.linspace(self.shape_start, self.shape_end, S, device=A.device, dtype=A.dtype)
             elif self.shape_mode == "power":
                 t = torch.linspace(0.0, 1.0, S, device=A.device, dtype=A.dtype)
-                shape_vec = self.shape_start + (self.shape_end - self.shape_start) * torch.pow(t, self.shape_power)
+                shape_vec = self.shape_start + (self.shape_end - self.shape_start) * torch.pow(t, 1.3) #self.shape_power)
             else:
                 raise ValueError(f"Unknown shape_mode: {self.shape_mode}")
 
@@ -165,7 +165,7 @@ class FullLearningAttention(nn.Module):
             # Initialise: flat bias of zero (start=0, end=0, power=1)
             self.shape_start     = nn.Parameter(torch.zeros(1))
             self.shape_end       = nn.Parameter(torch.ones(1))
-            self._shape_power_raw = nn.Parameter(torch.ones(1)*3)  # softplus -> 1.0
+            self._shape_power_raw = nn.Parameter(torch.ones(1)*1.3)  # softplus -> 1.0
         self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
@@ -236,6 +236,7 @@ class FullLearningAttention(nn.Module):
         if self.shape_mode != 'none':
             if self.fcount % 500 == 0:
                 print(f"scores : {scores}")
+                print(f"shape_power: {self.shape_power.item():.4f}")
             pb = self._positional_bias(S, queries.device)
             logit_range = torch.max(scores) - torch.min(scores)
             scores = scores + logit_range*pb /10
@@ -247,7 +248,7 @@ class FullLearningAttention(nn.Module):
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         self._record_positional_bias_history(S, queries.device)
-        print(f"shape_power: {self.shape_power.item():.4f}")
+
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
         if self.fcount % 500 ==0 :
