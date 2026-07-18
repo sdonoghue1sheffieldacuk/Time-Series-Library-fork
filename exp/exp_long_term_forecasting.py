@@ -173,7 +173,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
         return self.model
 
-    def test(self, setting, test=0):
+    def test(self, setting, test=0, collect_garbage=True):
         test_data, test_loader = self._get_data(flag='test')
         if test:
             print('loading model')
@@ -275,5 +275,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
+
+        if collect_garbage: 
+            self.model = None
 
         return

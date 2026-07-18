@@ -282,6 +282,11 @@ class FullLearningAttention(nn.Module):
         plt.title(f"Attention Head {head}")
         plt.savefig(f"self.fcount_{self.fcount}_{self.created}.png")
         plt.show()
+    
+    def garbage_collection(self):
+        self.positional_bias_history = None
+        
+
 
 
 class ProbAttention(nn.Module):
