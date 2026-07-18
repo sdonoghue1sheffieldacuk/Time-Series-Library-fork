@@ -165,7 +165,7 @@ class FullLearningAttention(nn.Module):
             # Initialise: flat bias of zero (start=0, end=0, power=1)
             self.shape_start     = nn.Parameter(torch.zeros(1))
             self.shape_end       = nn.Parameter(torch.ones(1))
-            self._shape_power_raw = nn.Parameter(torch.ones(1)*1.3)  # softplus -> 1.0
+            self._shape_power_raw = nn.Parameter(torch.ones(1)*2)  # softplus -> 1.0
         self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
