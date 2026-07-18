@@ -236,7 +236,9 @@ class FullLearningAttention(nn.Module):
         if self.shape_mode != 'none':
             if self.fcount % 500 == 0:
                 print(f"scores : {scores}")
-            scores = scores + self._positional_bias(S, queries.device)
+            pb = self._positional_bias(S, queries.device)
+            scores = scores + pb
+            print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.mmin(pb)} \n")
 
         if self.mask_flag:
             if attn_mask is None:
