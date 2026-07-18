@@ -100,7 +100,7 @@ class FullAttention(nn.Module):
                 shape_vec = torch.linspace(self.shape_start, self.shape_end, S, device=A.device, dtype=A.dtype)
             elif self.shape_mode == "power":
                 t = torch.linspace(0.0, 1.0, S, device=A.device, dtype=A.dtype)
-                shape_vec = self.shape_start + (self.shape_end - self.shape_start) * torch.pow(t, 1.3) #self.shape_power)
+                shape_vec = self.shape_start + (self.shape_end - self.shape_start) * torch.pow(t, self.shape_power)
             else:
                 raise ValueError(f"Unknown shape_mode: {self.shape_mode}")
 
