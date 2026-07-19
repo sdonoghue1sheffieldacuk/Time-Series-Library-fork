@@ -2,7 +2,7 @@ import argparse
 import os
 import torch
 import torch.backends
-from utils.print_args import print_args
+from utils.print_args import print_args, save_args
 import random
 import numpy as np
 
@@ -182,6 +182,7 @@ if __name__ == '__main__':
 
     print('Args in experiment:')
     print_args(args)
+    save_args(args)
 
 
     if args.task_name == 'long_term_forecast':
