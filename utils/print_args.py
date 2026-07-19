@@ -92,7 +92,7 @@ def save_args(args):
     f.write("\033[1m" + "Run Parameters" + "\033[0m\n")
     f.write(f'  {"Num Workers:":<20}{args.num_workers:<20}{"Itr:":<20}{args.itr:<20}\n')
     f.write(f'  {"Train Epochs:":<20}{args.train_epochs:<20}{"Batch Size:":<20}{args.batch_size:<20}\n')
-    f.write(f'  {"Patience:":<20}{args.patience:<20}{"Learning Rate:":<20}{args.learning_rate:<20}'\n)
+    f.write(f'  {"Patience:":<20}{args.patience:<20}{"Learning Rate:":<20}{args.learning_rate:<20}\n')
     f.write(f'  {"Des:":<20}{args.des:<20}{"Loss:":<20}{args.loss:<20}\n')
     f.write(f'  {"Lradj:":<20}{args.lradj:<20}{"Use Amp:":<20}{args.use_amp:<20}\n')
     f.write('\n')
