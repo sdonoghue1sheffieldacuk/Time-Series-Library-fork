@@ -72,8 +72,8 @@ def save_args(args):
     f.write('\n')
 
     if args.task_name in ['long_term_forecast', 'short_term_forecast']:
-        f.write("\033[1m" + "Forecasting Task" + "\033[0m"\n)
-        f.write(f'  {"Seq Len:":<20}{args.seq_len:<20}{"Label Len:":<20}{args.label_len:<20}'\n)
+        f.write("\033[1m" + "Forecasting Task" + "\033[0m\n")
+        f.write(f'  {"Seq Len:":<20}{args.seq_len:<20}{"Label Len:":<20}{args.label_len:<20}\n')
         f.write(f'  {"Pred Len:":<20}{args.pred_len:<20}{"Seasonal Patterns:":<20}{args.seasonal_patterns:<20}\n')
         f.write(f'  {"Inverse:":<20}{args.inverse:<20}\n')
         f.write('\n')
@@ -98,7 +98,7 @@ def save_args(args):
     f.write('\n')
 
     f.write("\033[1m" + "GPU" + "\033[0m\n")
-    f.write(f'  {"Use GPU:":<20}{args.use_gpu:<20}{"GPU:":<20}{args.gpu:<20\n}')
+    f.write(f'  {"Use GPU:":<20}{args.use_gpu:<20}{"GPU:":<20}{args.gpu:<20}\n')
     f.write(f'  {"Use Multi GPU:":<20}{args.use_multi_gpu:<20}{"Devices:":<20}{args.devices:<20}\n')
     f.write()
 
