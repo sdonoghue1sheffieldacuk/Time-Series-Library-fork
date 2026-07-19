@@ -100,7 +100,7 @@ def save_args(args):
     f.write("\033[1m" + "GPU" + "\033[0m\n")
     f.write(f'  {"Use GPU:":<20}{args.use_gpu:<20}{"GPU:":<20}{args.gpu:<20}\n')
     f.write(f'  {"Use Multi GPU:":<20}{args.use_multi_gpu:<20}{"Devices:":<20}{args.devices:<20}\n')
-    f.write()
+    f.write('\n')
 
     f.write("\033[1m" + "De-stationary Projector Params" + "\033[0m\n")
     p_hidden_dims_str = ', '.join(map(str, args.p_hidden_dims))
