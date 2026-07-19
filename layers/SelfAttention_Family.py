@@ -261,7 +261,7 @@ class FullLearningAttention(nn.Module):
 
     def visualize_attention(self, queries, S, A):
         print(f"self.shape_start:{self.shape_start} \t self.shape_end:{self.shape_end} \t self._shape_power_raw : {self._shape_power_raw}")
-        print(self._positional_bias(S, queries.device))
+        #print(self._positional_bias(S, queries.device))
         head = 0      # choose which head to view
         batch = 0     # first sample in the batch
 
