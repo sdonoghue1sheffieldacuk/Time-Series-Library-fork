@@ -182,11 +182,13 @@ if __name__ == '__main__':
 
     print('Args in experiment:')
     print_args(args)
-    save_args(args)
+
+    f = None
 
 
     if args.task_name == 'long_term_forecast':
         from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
+        f = open("complete_experiment_long_term_forecast.txt", 'a')
         Exp = Exp_Long_Term_Forecast
     elif args.task_name == 'short_term_forecast':
         from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
@@ -207,10 +209,12 @@ if __name__ == '__main__':
         from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
         Exp = Exp_Long_Term_Forecast
 
+    save_args(args ,f)
+
     if args.is_training:
         for ii in range(args.itr):
             # setting record of experiments
-            exp = Exp(args)  # set experiments
+            exp = Exp(args,f)  # set experiments
             setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_attn_shp{}s{}e{}p{}r{}|{}'.format(
                 args.task_name,
                 args.model_id,
