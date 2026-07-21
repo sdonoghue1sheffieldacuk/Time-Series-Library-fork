@@ -192,7 +192,7 @@ class FullLearningAttention(nn.Module):
 
     def _record_positional_bias_history(self, S: int, device) -> None:
         forward_count = self.fcount
-        if self.shape_mode == 'none' or forward_count % 500 != 0:
+        if forward_count % 500 != 0:
             return
 
         bias_snapshot = self._positional_bias(S, device).detach().cpu().view(-1).clone()
