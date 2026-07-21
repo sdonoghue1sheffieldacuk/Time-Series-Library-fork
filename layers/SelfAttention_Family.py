@@ -166,7 +166,7 @@ class FullLearningAttention(nn.Module):
         self.shape_mode = shape_mode
         self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
         self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
-        self._shape_power_raw =  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
+        self._shape_power_raw = shape_power #  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
 
         self.positional_bias_history = []
         self.fcount = -1 
@@ -187,7 +187,7 @@ class FullLearningAttention(nn.Module):
             t = pos.pow(self.shape_power)
         else:  # 'power_reverse'
             t = (1.0 - pos).pow(self.shape_power)
-        bias = self.shape_start + (self.shape_end - self.shape_start) * t
+        bias = self.shape_start*10 + (self.shape_end*10 - self.shape_start*10) * t
         return bias.view(1, 1, 1, S)
 
     def _record_positional_bias_history(self, S: int, device) -> None:
