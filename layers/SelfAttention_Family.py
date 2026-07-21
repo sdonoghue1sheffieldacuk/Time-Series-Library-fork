@@ -166,7 +166,7 @@ class FullLearningAttention(nn.Module):
         self.shape_mode = shape_mode
         self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
         self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
-        self._shape_power_raw = torch.ones(1)*shape_power  #  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
+        self._shape_power_raw = torch.ones(1, device=self.shape_start.device)*shape_power  # softplus -> 1.0
 
         self.positional_bias_history = []
         self.fcount = -1 
