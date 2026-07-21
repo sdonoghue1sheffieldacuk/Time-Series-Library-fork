@@ -164,11 +164,10 @@ class FullLearningAttention(nn.Module):
 
         ## temp code to set shape of linspace for attention head
         self.shape_mode = shape_mode
-        if shape_mode != 'none':
-            # Initialise: flat bias of zero (start=0, end=0, power=1)
-            self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
-            self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
-            self._shape_power_raw =  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
+        self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
+        self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
+        self._shape_power_raw =  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
+
         self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
