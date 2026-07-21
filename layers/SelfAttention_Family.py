@@ -151,6 +151,9 @@ class FullLearningAttention(nn.Module):
         attention_dropout=0.1,
         output_attention=False,
         shape_mode="none",      # "none" | "linear" | "power"
+        shape_start=1.0,
+        shape_end=1.0,
+        shape_power=1.0
 
     ):
         super(FullLearningAttention, self).__init__()
@@ -163,9 +166,9 @@ class FullLearningAttention(nn.Module):
         self.shape_mode = shape_mode
         if shape_mode != 'none':
             # Initialise: flat bias of zero (start=0, end=0, power=1)
-            self.shape_start     = nn.Parameter(torch.ones(1)*-4)
-            self.shape_end       = nn.Parameter(torch.ones(1)*4)
-            self._shape_power_raw =  nn.Parameter(torch.ones(1)*2)  # softplus -> 1.0
+            self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
+            self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
+            self._shape_power_raw =  nn.Parameter(torch.ones(1)*shape_power)  # softplus -> 1.0
         self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
