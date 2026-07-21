@@ -166,8 +166,8 @@ class FullLearningAttention(nn.Module):
         self.shape_mode = shape_mode
         self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
         self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
-        #self._shape_power_raw = torch.ones(1, device=self.shape_start.device)*shape_power  # softplus -> 1.0
-        self._shape_power_raw = shape_power  # softplus -> 1.0
+        self.register_buffer("_shape_power_raw", torch.tensor(shape_power))
+      
 
         self.positional_bias_history = []
         self.fcount = -1 
@@ -179,7 +179,8 @@ class FullLearningAttention(nn.Module):
     @property
     def shape_power(self):
         # Constrain to (0, inf) so the power function is always valid
-        return F.softplus(torch.ones(1,device=self.shape_end.device) * self._shape_power_raw)
+        return F.softplus(self._shape_power_raw)
+       #return F.softplus(torch.ones(1,device=self.shape_end.device) * self._shape_power_raw)
     
     def _positional_bias(self, S: int, device) -> torch.Tensor:
         """Returns a bias vector of shape [1, 1, 1, S] to add to attention scores."""
