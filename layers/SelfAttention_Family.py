@@ -163,9 +163,9 @@ class FullLearningAttention(nn.Module):
         self.shape_mode = shape_mode
         if shape_mode != 'none':
             # Initialise: flat bias of zero (start=0, end=0, power=1)
-            self.shape_start     = nn.Parameter(torch.zeros(1))
-            self.shape_end       = nn.Parameter(torch.zeros(1))
-            self._shape_power_raw = nn.Parameter(torch.ones(1))  # softplus -> 1.0
+            self.shape_start     = nn.Parameter(torch.ones(1)*-4)
+            self.shape_end       = nn.Parameter(torch.ones(1)*4)
+            self._shape_power_raw =  nn.Parameter(torch.ones(1)*2)  # softplus -> 1.0
         self.positional_bias_history = []
         self.fcount = -1 
         now = datetime.now()
@@ -234,7 +234,13 @@ class FullLearningAttention(nn.Module):
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
         
         if self.shape_mode != 'none':
-            scores = scores + self._positional_bias(S, queries.device)
+            #if self.fcount % 500 == 0:
+                #print(f"scores : {scores}")
+                #print(f"shape_power: {self.shape_power.item():.4f}")
+            pb = self._positional_bias(S, queries.device)
+            logit_range = torch.max(scores) - torch.min(scores)
+            #scores = scores + logit_range*pb /10
+            scores = scores*pb            #print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.min(pb)} \n")
 
         if self.mask_flag:
             if attn_mask is None:
@@ -242,7 +248,7 @@ class FullLearningAttention(nn.Module):
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         self._record_positional_bias_history(S, queries.device)
-        print(f"shape_power: {self.shape_power.item():.4f}")
+
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
         if self.fcount % 500 ==0 :
@@ -255,7 +261,7 @@ class FullLearningAttention(nn.Module):
 
     def visualize_attention(self, queries, S, A):
         print(f"self.shape_start:{self.shape_start} \t self.shape_end:{self.shape_end} \t self._shape_power_raw : {self._shape_power_raw}")
-        print(self._positional_bias(S, queries.device))
+        #print(self._positional_bias(S, queries.device))
         head = 0      # choose which head to view
         batch = 0     # first sample in the batch
 
@@ -276,6 +282,11 @@ class FullLearningAttention(nn.Module):
         plt.title(f"Attention Head {head}")
         plt.savefig(f"self.fcount_{self.fcount}_{self.created}.png")
         plt.show()
+    
+    def garbage_collection(self):
+        self.positional_bias_history = None
+        
+
 
 
 class ProbAttention(nn.Module):

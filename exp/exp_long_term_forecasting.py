@@ -18,8 +18,9 @@ warnings.filterwarnings('ignore')
 
 
 class Exp_Long_Term_Forecast(Exp_Basic):
-    def __init__(self, args):
+    def __init__(self, args , f=None):
         super(Exp_Long_Term_Forecast, self).__init__(args)
+        self.f = f
 
     def _build_model(self):
         model = self.model_dict[self.args.model](self.args).float()
@@ -173,7 +174,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
         return self.model
 
-    def test(self, setting, test=0):
+    def test(self, setting, test=0, collect_garbage=True):
         test_data, test_loader = self._get_data(flag='test')
         if test:
             print('loading model')
@@ -262,7 +263,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
+
+        # overall log file 
         f = open("result_long_term_forecast.txt", 'a')
+
         date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         
         f.write("date and time:" + date_time +" \n")
@@ -272,8 +276,19 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.write('\n')
         f.close()
 
+        #setting and results file 
+        if self.f!=None:
+            self.f.write("date and time:" + date_time +" \n")
+            self.f.write(setting + "  \n")
+            self.f.write('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
+            self.f.write('\n')
+            self.f.write('\n')
+        
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
+
+        if collect_garbage: 
+            self.model = None
 
         return
