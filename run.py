@@ -253,6 +253,9 @@ if __name__ == '__main__':
 
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
+            if f!=None:
+                f.close()
+                
             if args.use_gpu:
                 if args.gpu_type == 'mps':
                     torch.backends.mps.empty_cache()

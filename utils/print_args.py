@@ -59,6 +59,7 @@ def print_args(args):
     print()
 
 def save_args(args, f=None):
+    '''leaves the file open '''
 
     if f==None:
         f = open("result_long_term_forecast_setting.txt", 'a')
@@ -110,5 +111,5 @@ def save_args(args, f=None):
     p_hidden_dims_str = ', '.join(map(str, args.p_hidden_dims))
     f.write(f'  {"P Hidden Dims:":<20}{p_hidden_dims_str:<20}{"P Hidden Layers:":<20}{args.p_hidden_layers:<20}\n') 
     f.write('\n')
-    f.close()
+
 
