@@ -156,9 +156,6 @@ class FourierLayer(nn.Module):
 
         print("f.device:",f.device)
 
-        for i,idx in enumerate(index_tuple):
-            if torch.is_tensor(idx):
-                print(f"index_tuple[{i}].device:", idx.device)
         f = f.to(x_freq.device)
         f = rearrange(f[index_tuple], 'b f d -> b f () d').to(x_freq.device)
 
