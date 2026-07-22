@@ -206,7 +206,7 @@ class LevelLayer(nn.Module):
 
 class EncoderLayer(nn.Module):
 
-    def __init__(self, d_model, nhead, c_out, seq_len, pred_len, k, dim_feedforward=None, dropout=0.1,
+    def __init__(self, d_model, nhead, c_out, seq_len, pred_len, k, growth_layer, dim_feedforward=None, dropout=0.1,
                  activation='sigmoid', layer_norm_eps=1e-5):
         super().__init__()
         self.d_model = d_model
@@ -217,7 +217,8 @@ class EncoderLayer(nn.Module):
         dim_feedforward = dim_feedforward or 4 * d_model
         self.dim_feedforward = dim_feedforward
 
-        self.growth_layer = GrowthLayer(d_model, nhead, dropout=dropout)
+        self.growth_layer = growth_layer
+        #self.growth_layer = GrowthLayer(d_model, nhead, dropout=dropout)
         self.seasonal_layer = FourierLayer(d_model, pred_len, k=k)
         self.level_layer = LevelLayer(d_model, c_out, dropout=dropout)
 

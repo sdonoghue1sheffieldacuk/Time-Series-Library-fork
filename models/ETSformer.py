@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from layers.Embed import DataEmbedding
-from layers.ETSformer_EncDec import EncoderLayer, Encoder, DecoderLayer, Decoder, Transform
+from layers.ETSformer_EncDec import EncoderLayer, Encoder, DecoderLayer, Decoder, GrowthLayer, Transform
 
 
 class Model(nn.Module):
@@ -30,6 +30,7 @@ class Model(nn.Module):
             [
                 EncoderLayer(
                     configs.d_model, configs.n_heads, configs.enc_in, configs.seq_len, self.pred_len, configs.top_k,
+                    GrowthLayer(configs.d_model, configs.n_heads, configs.dropout),
                     dim_feedforward=configs.d_ff,
                     dropout=configs.dropout,
                     activation=configs.activation,
