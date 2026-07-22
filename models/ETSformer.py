@@ -1,3 +1,4 @@
+from layers.SelfAttention_Family import AttentionLayer, FullLearningAttention
 import torch
 import torch.nn as nn
 from layers.Embed import DataEmbedding
@@ -30,7 +31,10 @@ class Model(nn.Module):
             [
                 EncoderLayer(
                     configs.d_model, configs.n_heads, configs.enc_in, configs.seq_len, self.pred_len, configs.top_k,
-                    GrowthLayer(configs.d_model, configs.n_heads, configs.dropout),
+                    AttentionLayer(
+                        FullLearningAttention(False, configs.factor, attention_dropout=configs.dropout,
+                                      output_attention=False, shape_start=configs.attn_shape_start, shape_end=configs.attn_shape_end, shape_power=configs.attn_shape_power ), configs.d_model, configs.n_heads),
+                    #GrowthLayer(configs.d_model, configs.n_heads, configs.dropout),
                     dim_feedforward=configs.d_ff,
                     dropout=configs.dropout,
                     activation=configs.activation,
