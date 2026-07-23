@@ -229,8 +229,11 @@ class EncoderLayer(nn.Module):
 
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
-
+        self.fcount = 0
+    
     def forward(self, res, level, attn_mask=None):
+        self.fcount += 1
+
         season = self._season_block(res)
         res = res - season[:, :-self.pred_len]
         growth = self._growth_block(res)
@@ -238,6 +241,8 @@ class EncoderLayer(nn.Module):
         res = self.norm2(res + self.ff(res))
 
         level = self.level_layer(level, growth[:, :-1], season[:, :-self.pred_len])
+        if self.fcount %100 ==0:
+            print(f"EncoderLayer forward pass {self.fcount}: level {level} res shape {res.shape}, level shape {level.shape}, growth shape {growth.shape}, season shape {season.shape}")   
         return res, level, growth, season
 
     def _growth_block(self, x):
