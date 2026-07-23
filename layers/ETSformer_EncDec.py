@@ -138,9 +138,11 @@ class FourierLayer(nn.Module):
         self.pred_len = pred_len
         self.k = k
         self.low_freq = low_freq
+        self.fpass = -1
 
     def forward(self, x):
         """x: (b, t, d)"""
+        self.fpass += 1
         b, t, d = x.shape
         x_freq = fft.rfft(x, dim=1)
 
@@ -156,8 +158,11 @@ class FourierLayer(nn.Module):
 
         f = f.to(x_freq.device)
         f = rearrange(f[index_tuple], 'b f d -> b f () d').to(x_freq.device)
-
-        return self.extrapolate(x_freq, f, t)
+        r = self.extrapolate(x_freq, f, t)
+        if self.fpass % 100 == 0:
+            print(f"FourierLayer forward pass {self.fpass}: x shape {x.shape}, x_freq shape {x_freq.shape}, f shape {f.shape}")
+            print(f"FourierLayer forward pass {self.fpass}: r {r} ")
+        return r
 
     def extrapolate(self, x_freq, f, t):
         x_freq = torch.cat([x_freq, x_freq.conj()], dim=1)
@@ -241,8 +246,8 @@ class EncoderLayer(nn.Module):
         res = self.norm2(res + self.ff(res))
 
         level = self.level_layer(level, growth[:, :-1], season[:, :-self.pred_len])
-        if self.fcount %100 ==0:
-            print(f"EncoderLayer forward pass {self.fcount}: level {level} res shape {res.shape}, level shape {level.shape}, growth shape {growth.shape}, season shape {season.shape}")   
+        #if self.fcount %100 ==0:
+        #    print(f"EncoderLayer forward pass {self.fcount}: level {level} res shape {res.shape}, level shape {level.shape}, growth shape {growth.shape}, season shape {season.shape}")   
         return res, level, growth, season
 
     def _growth_block(self, x):
