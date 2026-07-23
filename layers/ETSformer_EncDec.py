@@ -241,8 +241,25 @@ class EncoderLayer(nn.Module):
         return res, level, growth, season
 
     def _growth_block(self, x):
-        x = self.growth_layer(x)
-        return self.dropout1(x)
+        # Support both the original GrowthLayer (callable with a single tensor)
+        # and attention-style modules (AttentionLayer / FullLearningAttention)
+        try:
+            out = self.growth_layer(x, x, x, attn_mask=None)
+            # AttentionLayer returns (out, attn) while some modules may return out
+            if isinstance(out, tuple) or isinstance(out, list):
+                out = out[0]
+
+            # If attention returned sequence of length t (same as input),
+            # prepend a padding token so shape matches GrowthLayer output (t+1).
+            if out.size(1) == x.size(1):
+                b, t, d = out.shape
+                pad = torch.zeros(b, 1, d, device=out.device, dtype=out.dtype)
+                out = torch.cat([pad, out], dim=1)
+        except TypeError:
+            # Fallback: growth_layer expects a single-argument call (e.g., GrowthLayer)
+            out = self.growth_layer(x)
+
+        return self.dropout1(out)
 
     def _season_block(self, x):
         x = self.seasonal_layer(x)
