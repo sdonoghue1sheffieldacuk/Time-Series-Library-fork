@@ -189,12 +189,14 @@ class FullLearningAttention(nn.Module):
             t = pos.pow(torch.ones(self.shape_power,device))
         else:  # 'power_reverse'
             t = (1.0 - pos).pow(self.shape_power)
-        bias = self.shape_start*10 + (self.shape_end*10 - self.shape_start*10) * t
+        #force flat 
+        #bias = self.shape_start*1 + (self.shape_end*1 - self.shape_start*1) * t
+        bias = torch.ones(S, device=device)
         return bias.view(1, 1, 1, S)
 
     def _record_positional_bias_history(self, S: int, device) -> None:
         forward_count = self.fcount
-        if forward_count % 500 != 0:
+        if forward_count % 1000 != 0:
             return
 
         bias_snapshot = self._positional_bias(S, device).detach().cpu().view(-1).clone()
