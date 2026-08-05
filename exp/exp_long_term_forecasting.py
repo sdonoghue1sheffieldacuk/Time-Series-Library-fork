@@ -168,10 +168,17 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
 
         head_id = 0
-        for name, module in self.model.named_modules():
-            if isinstance(module, FullLearningAttention):
-                head_id+=1 
-                module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
+
+
+        with open("final_biases.txt", "a", encoding="utf-8") as file:
+            for name, module in self.model.named_modules():
+                if isinstance(module, FullLearningAttention):
+                    head_id+=1 
+                    module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
+                    _start,_end,_power = module.last_bias()
+                    # one argument only 
+                    file.write(f"{name},{_start},{_end},{_power}")
+
         return self.model
 
     def test(self, setting, test=0, collect_garbage=True):
@@ -232,7 +239,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         input = test_data.inverse_transform(input.reshape(shape[0] * shape[1], -1)).reshape(shape)
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
                     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    visual(gt, pd, os.path.join(folder_path, str(i) + '.png'))
 
         preds = np.concatenate(preds, axis=0)
         trues = np.concatenate(trues, axis=0)
@@ -273,6 +280,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, dtw:{}'.format(mse, mae, dtw))
         f.write('\n')
+        f.write('mse:{}, mae:{}, rmse:{} mape:{} mspe:{}'.format(mse, mae, rmse, mape, mspe))
         f.write('\n')
         f.close()
 

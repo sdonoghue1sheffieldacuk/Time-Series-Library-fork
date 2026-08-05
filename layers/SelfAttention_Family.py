@@ -207,6 +207,10 @@ class FullLearningAttention(nn.Module):
             "bias": bias_snapshot,
         })
 
+    def last_bias(self):
+        '''start, end , power'''
+        return self.shape_start ,self.shape_end , self.shape_power
+
     def plot_positional_bias_history(self, show=True, save_path=None):
         if not self.positional_bias_history:
             raise ValueError("No positional bias history recorded yet.")
