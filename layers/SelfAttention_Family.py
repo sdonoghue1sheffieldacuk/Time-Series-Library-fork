@@ -186,7 +186,8 @@ class FullLearningAttention(nn.Module):
         """Returns a bias vector of shape [1, 1, 1, S] to add to attention scores."""
         pos = torch.linspace(0.0, 1.0, S, device=device)         # [S]
         if self.shape_mode == 'power':
-            t = pos.pow(torch.ones(self.shape_power,device))
+            t = pos.pow(self.shape_power)
+            #t = pos.pow(torch.ones(self.shape_power,device))
         else:  # 'power_reverse'
             t = (1.0 - pos).pow(self.shape_power)
         
