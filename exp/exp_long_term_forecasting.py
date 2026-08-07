@@ -170,7 +170,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         head_id = 0
 
 
-        with open("final_biases.txt", "a", encoding="utf-8") as file:
+        with open("final_biases.txt", "w", encoding="utf-8") as file:
             for name, module in self.model.named_modules():
                 if isinstance(module, FullLearningAttention):
                     head_id+=1 
