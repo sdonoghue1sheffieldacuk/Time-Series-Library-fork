@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from layers import StandardNorm
 
 
 class ConvLayer(nn.Module):
@@ -33,6 +34,7 @@ class EncoderLayer(nn.Module):
         self.conv2 = nn.Conv1d(in_channels=d_ff, out_channels=d_model, kernel_size=1)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
+        self.std_norm = StandardNorm(d_model)
         self.dropout = nn.Dropout(dropout)
         self.activation = F.relu if activation == "relu" else F.gelu
 
@@ -48,11 +50,20 @@ class EncoderLayer(nn.Module):
 
 
     def forward(self, x, attn_mask=None, tau=None, delta=None):
+        #revin
+        #batch normalise - used to stationise data for the attention
+        x = self.std_norm(x,"norm")
+
         new_x, attn = self.attention(
             x, x, x,
             attn_mask=attn_mask,
             tau=tau, delta=delta
         )
+
+        #revin
+        #batch DEnormalise - used to destationise data after tha attentio is done
+        x = self.std_norm(x,"denorm")
+
         x = x + self.dropout(new_x)
 
         y = x = self.norm1(x)
@@ -100,6 +111,7 @@ class DecoderLayer(nn.Module):
         self.cross_attention = cross_attention
         self.conv1 = nn.Conv1d(in_channels=d_model, out_channels=d_ff, kernel_size=1)
         self.conv2 = nn.Conv1d(in_channels=d_ff, out_channels=d_model, kernel_size=1)
+        self.std_norm = StandardNorm(d_model)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
@@ -107,11 +119,16 @@ class DecoderLayer(nn.Module):
         self.activation = F.relu if activation == "relu" else F.gelu
 
     def forward(self, x, cross, x_mask=None, cross_mask=None, tau=None, delta=None):
+        #revin
+        #batch normalise - used to stationise data for the attention 
+        x = self.std_norm(x,"norm")
+        
         x = x + self.dropout(self.self_attention(
             x, x, x,
             attn_mask=x_mask,
             tau=tau, delta=None
         )[0])
+        #normal transformer stablisation normalisation 
         x = self.norm1(x)
 
         x = x + self.dropout(self.cross_attention(
@@ -119,7 +136,11 @@ class DecoderLayer(nn.Module):
             attn_mask=cross_mask,
             tau=tau, delta=delta
         )[0])
+        #revin
+        #batch DEnormalise - used to destationise data after tha attentio is done
+        x = self.std_norm(x,"denorm")
 
+        # normal transformer stablisation normalisation
         y = x = self.norm2(x)
         y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
         y = self.dropout(self.conv2(y).transpose(-1, 1))
