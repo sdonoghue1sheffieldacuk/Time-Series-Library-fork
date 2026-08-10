@@ -150,11 +150,7 @@ class FullLearningAttention(nn.Module):
         scale=None,
         attention_dropout=0.1,
         output_attention=False,
-        shape_mode="none",      # "none" | "linear" | "power"
-        shape_start=1.0,
-        shape_end=1.0,
-        shape_power=1.0
-
+        n_heads=8,
     ):
         super(FullLearningAttention, self).__init__()
         self.scale = scale
@@ -162,62 +158,57 @@ class FullLearningAttention(nn.Module):
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 
-        ## temp code to set shape of linspace for attention head
-        self.shape_mode = shape_mode
-        self.shape_start     = nn.Parameter(torch.ones(1)*shape_start)
-        self.shape_end       = nn.Parameter(torch.ones(1)*shape_end)
-        self.register_buffer("_shape_power_raw", torch.tensor(shape_power))
-      
+        # Per-head learnable Gaussian positional bias parameters.
+        # mean=1.0 initialises each head to peak at the most recent position.
+        # std is constrained to (0, inf) via softplus in the property below.
+        self.gaussian_amplitude = nn.Parameter(torch.ones(n_heads))
+        self.gaussian_mean      = nn.Parameter(torch.ones(n_heads))       # init at position 1.0
+        self._gaussian_std_raw  = nn.Parameter(torch.ones(n_heads))
 
         self.positional_bias_history = []
-        self.fcount = -1 
+        self.fcount = -1
         now = datetime.now()
-        self.created = formatted = now.strftime("%Y%m%d_%H%M%S")
+        self.created = now.strftime("%Y%m%d_%H%M%S")
 
-        print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}")
-    
+        print(f"creating full attention mask_flag={mask_flag}, factor={factor}, scale={scale}, attention_dropout={attention_dropout}, output_attention={output_attention}, n_heads={n_heads}")
+
     @property
-    def shape_power(self):
-        # Constrain to (0, inf) so the power function is always valid
-        return F.softplus(self._shape_power_raw)
-       #return F.softplus(torch.ones(1,device=self.shape_end.device) * self._shape_power_raw)
-    
+    def gaussian_std(self) -> torch.Tensor:
+        """Constrain std to (0, inf) so the Gaussian is always valid."""
+        return F.softplus(self._gaussian_std_raw) + 1e-6
+
     def _positional_bias(self, S: int, device) -> torch.Tensor:
-        """Returns a bias vector of shape [1, 1, 1, S] to add to attention scores."""
-        pos = torch.linspace(0.0, 1.0, S, device=device)         # [S]
-        if self.shape_mode == 'power':
-            t = pos.pow(self.shape_power)
-            #t = pos.pow(torch.ones(self.shape_power,device))
-        else:  # 'power_reverse'
-            t = (1.0 - pos).pow(self.shape_power)
-        
-        bias = self.shape_start*1 + (self.shape_end*1 - self.shape_start*1) * t
-        #force flat 
-        #bias = torch.ones(S, device=device)
-        return bias.view(1, 1, 1, S)
+        """Returns a per-head Gaussian bias of shape [1, H, 1, S] to multiply attention scores."""
+        pos = torch.linspace(0.0, 1.0, S, device=device)                  # [S]
+        mu  = self.gaussian_mean.to(device).unsqueeze(1)                   # [H, 1]
+        sig = self.gaussian_std.to(device).unsqueeze(1)                    # [H, 1]
+        amp = self.gaussian_amplitude.to(device).unsqueeze(1)              # [H, 1]
+        bias = amp * torch.exp(-((pos - mu) ** 2) / (2 * sig ** 2))       # [H, S]
+        return bias.unsqueeze(0).unsqueeze(2)                              # [1, H, 1, S]
 
     def _record_positional_bias_history(self, S: int, device) -> None:
         forward_count = self.fcount
         if forward_count % 1000 != 0:
             return
 
-        bias_snapshot = self._positional_bias(S, device).detach().cpu().view(-1).clone()
+        # Store [H, S] snapshot (one row per head)
+        bias_snapshot = self._positional_bias(S, device).detach().cpu().squeeze(0).squeeze(1).clone()
         self.positional_bias_history.append({
             "forward_count": forward_count,
             "bias": bias_snapshot,
         })
 
     def last_bias(self):
-        '''start, end , power'''
-        return self.shape_start ,self.shape_end , self.shape_power
+        """Returns (amplitude, mean, std) tensors of shape [H]."""
+        return self.gaussian_amplitude, self.gaussian_mean, self.gaussian_std
 
-    def plot_positional_bias_history(self, show=True, save_path=None):
+    def plot_positional_bias_history(self, head=0, show=True, save_path=None):
         if not self.positional_bias_history:
             raise ValueError("No positional bias history recorded yet.")
 
         plt.figure(figsize=(10, 6))
         for history_entry in self.positional_bias_history:
-            bias_values = history_entry["bias"].numpy()
+            bias_values = history_entry["bias"][head].numpy()   # [S] for chosen head
             plt.plot(
                 np.arange(len(bias_values)),
                 bias_values,
@@ -226,7 +217,7 @@ class FullLearningAttention(nn.Module):
 
         plt.xlabel("Position")
         plt.ylabel("Positional Bias")
-        plt.title("FullLearningAttention Positional Bias History")
+        plt.title(f"FullLearningAttention Positional Bias History (head {head})")
         plt.legend()
         plt.tight_layout()
 
@@ -267,7 +258,8 @@ class FullLearningAttention(nn.Module):
             return V.contiguous(), None
 
     def visualize_attention(self, queries, S, A):
-        print(f"self.shape_start:{self.shape_start} \t self.shape_end:{self.shape_end} \t self._shape_power_raw : {self._shape_power_raw}")
+        amp, mu, sig = self.last_bias()
+        print(f"gaussian_amplitude:{amp.detach().cpu().numpy()} \t gaussian_mean:{mu.detach().cpu().numpy()} \t gaussian_std:{sig.detach().cpu().numpy()}")
         #print(self._positional_bias(S, queries.device))
         head = 0      # choose which head to view
         batch = 0     # first sample in the batch

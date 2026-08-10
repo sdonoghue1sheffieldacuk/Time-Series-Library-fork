@@ -175,9 +175,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 if isinstance(module, FullLearningAttention):
                     head_id+=1 
                     module.plot_positional_bias_history(save_path=f"flat_encoder_positional_bias_history{head_id}.png")
-                    _start,_end,_power = module.last_bias()
+                    _amp, _mean, _std = module.last_bias()
                     # one argument only 
-                    file.write(f"{name},{_start},{_end},{_power}")
+                    file.write(f"{name},{_amp.detach().cpu().numpy()},{_mean.detach().cpu().numpy()},{_std.detach().cpu().numpy()}")
 
         return self.model
 
