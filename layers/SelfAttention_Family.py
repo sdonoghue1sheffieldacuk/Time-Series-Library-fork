@@ -236,9 +236,10 @@ class FullLearningAttention(nn.Module):
 
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
 
-        pb = self._positional_bias(S, queries.device)
+        # hacking this out, to go bac to vanilla
+        #pb = self._positional_bias(S, queries.device)
         #logit_range = torch.max(scores) - torch.min(scores)
-        scores = scores*pb            #print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.min(pb)} \n")
+        #scores = scores*pb            #print(f"scores max:{torch.max(scores)} \t scores min : {torch.min(scores)} bias max:{torch.max(pb)} \t bias min : {torch.min(pb)} \n")
 
         if self.mask_flag:
             if attn_mask is None:
