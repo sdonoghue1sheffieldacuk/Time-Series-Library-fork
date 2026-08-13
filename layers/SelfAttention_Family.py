@@ -179,7 +179,7 @@ class FullLearningAttention(nn.Module):
 
     def _positional_bias(self, S: int, device) -> torch.Tensor:
         """Returns a per-head Gaussian bias of shape [1, H, 1, S] to multiply attention scores."""
-        pos = torch.linspace(0.0, 1.0, S, device=device)                  # [S]
+        pos = torch.ones(S, device=device)                  # [S]
         mu  = self.gaussian_mean.to(device).unsqueeze(1)                   # [H, 1]
         sig = self.gaussian_std.to(device).unsqueeze(1)                    # [H, 1]
         amp = self.gaussian_amplitude.to(device).unsqueeze(1)              # [H, 1]
@@ -212,12 +212,12 @@ class FullLearningAttention(nn.Module):
             plt.plot(
                 np.arange(len(bias_values)),
                 bias_values,
-                label=f"forward {history_entry['forward_count']}"
+                label=f"Forward Pass: {history_entry['forward_count']}"
             )
 
         plt.xlabel("Position")
         plt.ylabel("Positional Bias")
-        plt.title(f"FullLearningAttention Positional Bias History (head {head})")
+        plt.title(f"Full-Learning-Attention Positional Bias History (head {head})")
         plt.legend()
         plt.tight_layout()
 
