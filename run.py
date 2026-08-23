@@ -162,6 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--attn_shape_end', type=float, default=1.0)
     parser.add_argument('--attn_shape_power', type=float, default=1.0)
     parser.add_argument('--attn_shape_renorm', action='store_true')
+    parser.add_argument('--override_checkpoint',type=str, default=None)
 
     args = parser.parse_args()
     if torch.cuda.is_available() and args.use_gpu:
@@ -298,7 +299,11 @@ if __name__ == '__main__':
                     + f'_tvdt{args.tv_dt}_tvB{args.tv_B}_tvC{args.tv_C}_useD{int(args.use_D)}_{args.des}_{ii}'
 
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting, test=1)
+        if args.override_checkpoint:
+            exp.test(setting, test=1, override_checkpoint=args.override_checkpoint)
+        else: 
+            exp.test(setting, test=1)
+            
         if args.use_gpu:
             if args.gpu_type == 'mps':
                 torch.backends.mps.empty_cache()
