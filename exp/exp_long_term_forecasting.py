@@ -181,12 +181,18 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         return self.model
 
-    def test(self, setting, test=0, collect_garbage=True):
+    def test(self, setting, test=0, collect_garbage=True, override_checkpoint=None ):
         test_data, test_loader = self._get_data(flag='test')
         if test:
-            print('loading model')
-            self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
-
+            if override_checkpoint ==None :
+                print('loading model')
+                self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
+            else:
+                print(f'over riding default model with {override_checkpoint}')
+                self.model.load_state_dict(torch.load(override_checkpoint))
+                date_time = datetime.now().strftime("%m-%d_%H-%M")
+                setting = f"overridden{date_time}"
+                
         preds = []
         trues = []
         folder_path = './test_results/' + setting + '/'
