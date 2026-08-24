@@ -210,7 +210,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     print(f'over riding default model with {override_checkpoint}')
                     telltail.write(f'over riding default model with {override_checkpoint}\n')
                     self.model.load_state_dict(torch.load(override_checkpoint))
-                    date_time = datetime.now().strftime("%m-%d_%H-%M")
+                    date_time = datetime.datetime.now().strftime("%m-%d_%H-%M")
                     setting = f"overridden{date_time}"
                     
             preds = []
@@ -300,7 +300,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             # overall log file 
             f = open("result_long_term_forecast.txt", 'a')
 
-            date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            date_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
             
             f.write("date and time:" + date_time +" \n")
             f.write(setting + "  \n")
