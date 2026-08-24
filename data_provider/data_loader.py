@@ -25,10 +25,13 @@ class Dataset_Custom_MultiSeq(Dataset):
     Expected CSV format:
         date, series_id, feature1, ..., target
 
-    The dataset is split into train/val/test by sequence, not by time.
-    Sliding windows are only built within each sequence's split portion,
-    so no window ever straddles a sequence boundary.
-    The scaler is fitted on the combined train portions of all sequences.
+    Leak-safe split by series AND time
+      Series IDs are partitioned into train/val/test groups 70/10/20 BY COUNT
+      Within each series, timesteps are partitioned into train/val/test
+      regions 70/10/20 BY TIMESTMP, with the standard seq_len rewind at the beginning for context
+      data is double bounded, only the validation portion of a validation sequence is available etc   
+      std scaler is fit on train-series x train-time only.
+      No window ever crosses a series boundary or a time-region boundary.
     """
 
     def __init__(self, args, root_path, flag='train', size=None,
@@ -56,10 +59,21 @@ class Dataset_Custom_MultiSeq(Dataset):
         self.data_path = data_path
         self.__read_data__()
 
+    def _time_borders(self, n):
+        #Per-series chronological borders (with seq_len rewind for val/test)
+        num_train = int(n * 0.7)
+        num_test  = int(n * 0.2)
+        num_vali  = n - num_train - num_test
+        border1s = [0,
+                    num_train - self.seq_len,
+                    n - num_test - self.seq_len]
+        border2s = [num_train,
+                    num_train + num_vali,
+                    n]
+        return border1s, border2s
+
     def __read_data__(self):
         self.scaler = StandardScaler()
-        print(os.path.join(self.root_path, self.data_path))
-        print
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
 
         other_cols = [c for c in df_raw.columns
@@ -72,27 +86,38 @@ class Dataset_Custom_MultiSeq(Dataset):
             else [self.target]
         )
 
-        # Assign whole sequences to splits by sequence order
-        all_ids = list(dict.fromkeys(df_raw[self.seq_id_col]))  # stable, deduplicated
+        #### Series-level split (70/10/20 by COUNT) 
+        all_ids = list(dict.fromkeys(df_raw[self.seq_id_col]))
         n_seqs = len(all_ids)
-        num_train = int(n_seqs * 0.7)
-        num_test  = int(n_seqs * 0.2)
-        num_vali  = n_seqs - num_train - num_test
+        n_train_s = int(n_seqs * 0.7)
+        n_test_s  = int(n_seqs * 0.2)
+        n_vali_s  = n_seqs - n_train_s - n_test_s
 
         split_ids = [
-            set(all_ids[:num_train]),                              # train
-            set(all_ids[num_train:num_train + num_vali]),          # val
-            set(all_ids[num_train + num_vali:]),                   # test
+            set(all_ids[:n_train_s]),                                # train
+            set(all_ids[n_train_s:n_train_s + n_vali_s]),            # val
+            set(all_ids[n_train_s + n_vali_s:]),                     # test
         ]
         ids_for_this_split = split_ids[self.set_type]
         train_ids = split_ids[0]
 
-        # Fit scaler on train sequences only
-        if self.scale:
-            train_data = df_raw[df_raw[self.seq_id_col].isin(train_ids)][feat_cols].values
-            self.scaler.fit(train_data)
+        # Pre-group series once
+        groups = {sid: df_raw[df_raw[self.seq_id_col] == sid].reset_index(drop=True)
+                  for sid in all_ids}
 
-        # Build arrays and window index for sequences in this split
+        ##### Fit scaler on train-series x train-time only
+        if self.scale:
+            train_slices = []
+            for sid in train_ids:
+                group = groups[sid]
+                n = len(group)
+                _, b2s = self._time_borders(n)
+                # Pure train region [0 : num_train] (no rewind) for scaler fit.
+                train_slices.append(group[feat_cols].iloc[0:b2s[0]].values)
+            if len(train_slices) > 0:
+                self.scaler.fit(np.concatenate(train_slices, axis=0))
+
+        ##### Build windows: split series x this split's time region 
         self._data_arrays = []
         self.window_index = []
 
@@ -100,11 +125,18 @@ class Dataset_Custom_MultiSeq(Dataset):
             if seq_id not in ids_for_this_split:
                 continue
 
-            group = df_raw[df_raw[self.seq_id_col] == seq_id].reset_index(drop=True)
-            raw = group[feat_cols].values
-            data = self.scaler.transform(raw) if self.scale else raw
+            group = groups[seq_id]
+            n = len(group)
+            b1s, b2s = self._time_borders(n)
+            b1, b2 = b1s[self.set_type], b2s[self.set_type]
+            if b1 < 0 or b2 - b1 < self.seq_len + self.pred_len:
+                continue  # series too short for this split
 
-            df_stamp = group[['date']].copy()
+            raw_full = group[feat_cols].values
+            data_full = self.scaler.transform(raw_full) if self.scale else raw_full
+            data = data_full[b1:b2]
+
+            df_stamp = group[['date']].iloc[b1:b2].copy()
             df_stamp['date'] = pd.to_datetime(df_stamp['date'])
             if self.timeenc == 0:
                 data_stamp = np.column_stack([
