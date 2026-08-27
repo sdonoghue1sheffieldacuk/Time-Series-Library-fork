@@ -180,6 +180,167 @@ class Dataset_Custom_MultiSeq(Dataset):
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
+
+
+class Dataset_Custom_MultiSeq_Test_Only(Dataset):
+    """
+    Like Dataset_Custom but supports a CSV containing multiple independent
+    sequences identified by a `series_id` column (or whatever seq_id_col is set to).
+
+    Expected CSV format:
+        date, series_id, feature1, ..., target
+    Only for inference on test sequences; assigns all data to test set (no train/val split)
+    scaler fitted on all test data
+    """
+
+    def __init__(self, args, root_path, flag='train', size=None,
+                 features='S', data_path='data.csv',
+                 target='OT', scale=True, timeenc=0, freq='h',
+                 seasonal_patterns=None, seq_id_col='series_id'):
+        self.args = args
+        if size is None:
+            self.seq_len = 24 * 4 * 4
+            self.label_len = 24 * 4
+            self.pred_len = 24 * 4
+        else:
+            self.seq_len, self.label_len, self.pred_len = size
+
+        assert flag in ['train', 'val', 'test']
+        self.set_type = {'train': 0, 'val': 1, 'test': 2}[flag]
+
+        self.features = features
+        self.target = target
+        self.scale = scale
+        self.timeenc = timeenc
+        self.freq = freq
+        self.seq_id_col = seq_id_col
+        self.root_path = root_path
+        self.data_path = data_path
+        self.__read_data__()
+
+    def _time_borders(self, n):
+        #Per-series chronological borders (with seq_len rewind for val/test)
+        num_train = int(n * 0)
+        num_test  = int(n * 1)
+        num_vali  = n - num_train - num_test
+        border1s = [0,
+                    num_train - self.seq_len,
+                    n - num_test - self.seq_len]
+        border2s = [num_train,
+                    num_train + num_vali,
+                    n]
+        return border1s, border2s
+
+    def __read_data__(self):
+        self.scaler = StandardScaler()
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+
+        other_cols = [c for c in df_raw.columns
+                    if c not in ('date', self.seq_id_col, self.target)]
+        df_raw = df_raw[['date', self.seq_id_col] + other_cols + [self.target]]
+
+        feat_cols = (
+            [c for c in df_raw.columns if c not in ('date', self.seq_id_col)]
+            if self.features in ('M', 'MS')
+            else [self.target]
+        )
+
+        #### Series-level split (70/10/20 by COUNT) 
+        all_ids = list(dict.fromkeys(df_raw[self.seq_id_col]))
+        n_seqs = len(all_ids)
+        n_train_s = int(n_seqs * 0)
+        n_test_s  = int(n_seqs * 1)
+        n_vali_s  = n_seqs - n_train_s - n_test_s
+
+        split_ids = [
+            set(all_ids[:n_train_s]),                                # train
+            set(all_ids[n_train_s:n_train_s + n_vali_s]),            # val
+            set(all_ids[n_train_s + n_vali_s:]),                     # test
+        ]
+        ids_for_this_split = split_ids[self.set_type]
+        test_ids = split_ids[2]  # use test series for scaler fit
+
+        # Pre-group series once
+        groups = {sid: df_raw[df_raw[self.seq_id_col] == sid].reset_index(drop=True)
+                  for sid in all_ids}
+
+        ##### Fit scaler on test-series as thats all we got 
+        if self.scale:
+            test_slices = []
+            for sid in test_ids:
+                group = groups[sid]
+                n = len(group)
+                _, b2s = self._time_borders(n)
+                # Pure test region [0 : num_train] (no rewind) for scaler fit.
+                test_slices.append(group[feat_cols].iloc[0:b2s[0]].values)
+            if len(test_slices) > 0:
+                self.scaler.fit(np.concatenate(test_slices, axis=0))
+
+        ##### Build windows: split series x this split's time region 
+        self._data_arrays = []
+        self.window_index = []
+
+        for seq_id in all_ids:
+            if seq_id not in ids_for_this_split:
+                continue
+
+            group = groups[seq_id]
+            n = len(group)
+            b1s, b2s = self._time_borders(n)
+            b1, b2 = b1s[self.set_type], b2s[self.set_type]
+            if b1 < 0 or b2 - b1 < self.seq_len + self.pred_len:
+                continue  # series too short for this split
+
+            raw_full = group[feat_cols].values
+            data_full = self.scaler.transform(raw_full) if self.scale else raw_full
+            data = data_full[b1:b2]
+
+            df_stamp = group[['date']].iloc[b1:b2].copy()
+            df_stamp['date'] = pd.to_datetime(df_stamp['date'])
+            if self.timeenc == 0:
+                data_stamp = np.column_stack([
+                    df_stamp['date'].dt.month,
+                    df_stamp['date'].dt.day,
+                    df_stamp['date'].dt.weekday,
+                    df_stamp['date'].dt.hour,
+                ])
+            else:
+                data_stamp = time_features(
+                    pd.to_datetime(df_stamp['date'].values), freq=self.freq
+                ).transpose(1, 0)
+
+            if self.set_type == 0 and self.args.augmentation_ratio > 0:
+                data, _, _ = run_augmentation_single(data, data, self.args)
+
+            seq_idx = len(self._data_arrays)
+            self._data_arrays.append((data, data_stamp))
+
+            n_windows = len(data) - self.seq_len - self.pred_len + 1
+            for i in range(max(0, n_windows)):
+                self.window_index.append((seq_idx, i))
+    def __getitem__(self, index):
+        seq_idx, i = self.window_index[index]
+        data_x, data_stamp = self._data_arrays[seq_idx]
+
+        s_begin = i
+        s_end   = s_begin + self.seq_len
+        r_begin = s_end   - self.label_len
+        r_end   = r_begin + self.label_len + self.pred_len
+
+        return (
+            data_x[s_begin:s_end],
+            data_x[r_begin:r_end],
+            data_stamp[s_begin:s_end],
+            data_stamp[r_begin:r_end],
+        )
+
+    def __len__(self):
+        return len(self.window_index)
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
+
+
 class Dataset_ETT_hour(Dataset):
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
