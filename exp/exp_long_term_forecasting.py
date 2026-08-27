@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 
 class Exp_Long_Term_Forecast_Test_Only(Exp_Basic):
     def __init__(self, args , f=None):
-        super(Exp_Long_Term_Forecast_Test_Only, self).__init__(args)
+        super(Exp_Long_Term_Forecast, self).__init__(args)
         self.f = f
 
     def _build_model(self):
