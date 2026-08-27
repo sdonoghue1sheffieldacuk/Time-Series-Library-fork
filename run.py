@@ -191,11 +191,6 @@ if __name__ == '__main__':
         from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
         f = open("complete_experiment_long_term_forecast.txt", 'a')
         Exp = Exp_Long_Term_Forecast
-    if args.task_name == 'long_term_forecast_test_only':
-        from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast_Test_Only
-        f = open("complete_experiment_long_term_forecast.txt", 'a')
-        f.write("test only")
-        Exp = Exp_Long_Term_Forecast_Test_Only
     elif args.task_name == 'short_term_forecast':
         from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
         Exp = Exp_Short_Term_Forecast
