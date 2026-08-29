@@ -163,6 +163,8 @@ if __name__ == '__main__':
     parser.add_argument('--attn_shape_power', type=float, default=1.0)
     parser.add_argument('--attn_shape_renorm', action='store_true')
     parser.add_argument('--override_checkpoint',type=str, default=None)
+    parser.add_argument('--loader_train',type=float, default=0.7)
+    parser.add_argument('--loader_test',type=float, default=0.2)
 
     args = parser.parse_args()
     if torch.cuda.is_available() and args.use_gpu:
