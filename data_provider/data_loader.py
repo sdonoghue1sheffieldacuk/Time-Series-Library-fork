@@ -37,8 +37,20 @@ class Dataset_Custom_MultiSeq(Dataset):
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='data.csv',
                  target='OT', scale=True, timeenc=0, freq='h',
-                 seasonal_patterns=None, seq_id_col='series_id'):
+                 seasonal_patterns=None, seq_id_col='series_id' ):
         self.args = args
+        if self.args.loader_train is None:
+            self.loader_train = 0.7
+        else:
+            self.loader_train = self.args.loader_train
+
+        if self.args.loader_test is None:
+            self.loader_test = 0.2
+        else:
+            self.loader_test = self.args.loader_test
+                    
+        
+
         if size is None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -61,8 +73,8 @@ class Dataset_Custom_MultiSeq(Dataset):
 
     def _time_borders(self, n):
         #Per-series chronological borders (with seq_len rewind for val/test)
-        num_train = int(n * 0.7)
-        num_test  = int(n * 0.2)
+        num_train = int(n * self.loader_train)
+        num_test  = int(n * self.loader_test)
         num_vali  = n - num_train - num_test
         border1s = [0,
                     num_train - self.seq_len,
@@ -89,8 +101,8 @@ class Dataset_Custom_MultiSeq(Dataset):
         #### Series-level split (70/10/20 by COUNT) 
         all_ids = list(dict.fromkeys(df_raw[self.seq_id_col]))
         n_seqs = len(all_ids)
-        n_train_s = int(n_seqs * 0.7)
-        n_test_s  = int(n_seqs * 0.2)
+        n_train_s = int(n_seqs * self.loader_train)
+        n_test_s  = int(n_seqs * self.loader_test)
         n_vali_s  = n_seqs - n_train_s - n_test_s
 
         split_ids = [
