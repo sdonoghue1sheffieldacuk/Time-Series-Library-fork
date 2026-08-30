@@ -258,7 +258,7 @@ class FullLearningAttention(nn.Module):
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         # Visualize the attention weights for the first head and first sample in the batch every 100 forward passes
-        if self.fcount % 500 ==0 :
+        if self.fcount % 5000 ==0 :
             self.visualize_attention(queries, S, A)
         V = torch.einsum("bhls,bshd->blhd", A, values)
         if self.output_attention:
